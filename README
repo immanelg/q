@@ -1,5 +1,9 @@
 Simple shell queuer daemon.
 
+Install:
+    ./do install
+    ./do uninstall
+
 Examples:
     # server
     q -s
