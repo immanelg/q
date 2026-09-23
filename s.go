@@ -131,7 +131,7 @@ func runserver() error {
 			// defer close(r.client) ?
 			switch r.cmd[:2] {
 				case"-Q":
-				r.client <- "0"
+				r.client <- "ok"
 				close(r.client)
 				break mainloop
 			case "-l":
@@ -164,7 +164,7 @@ func runserver() error {
 						}
 						if i == 0 || queue.tasks[i-1].completed {
 							taskCancelCh <- struct{}{}
-							r.client <- "ok" // TODO?
+							r.client <- "ok"
 							close(r.client)
 							continue mainloop
 						}
