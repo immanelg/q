@@ -1,13 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
-	"strconv"
-	"time"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Queue struct {
@@ -33,11 +34,21 @@ type Request struct {
 }
 
 
-func taskexec(taskDoneCh chan ExecResult, task Task) {
+func taskexec(taskDoneCh chan ExecResult, task Task, taskCancelCh chan struct{}) {
 	// fmt.Fprintf(os.Stderr, "%s #%s\n", task.exec, task.id)
 	fmt.Fprintf(os.Stderr, "# start %s\n%s\n", task.id, task.exec)
 	// var stdout, stderr bytes.Buffer
-	cmd := exec.Command("sh", "-c", task.exec)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		select {
+		case <-taskCancelCh:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	cmd := exec.CommandContext(ctx, "sh", "-c", task.exec)
 	// xxx: maybe just stream it to stdout/stderr?
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stdout
@@ -46,7 +57,9 @@ func taskexec(taskDoneCh chan ExecResult, task Task) {
     err := cmd.Run()
 	result := ExecResult{0}
     if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		if ctx.Err() == context.Canceled {
+			result.statuscode = -2
+		} else if exitErr, ok := err.(*exec.ExitError); ok {
 			result.statuscode = exitErr.ExitCode()
 		} else {
 			result.statuscode = -1
@@ -82,6 +95,7 @@ func runserver() error {
 	defer ln.Close()
 
 	taskDoneCh := make(chan ExecResult, 1)
+	taskCancelCh := make(chan struct{}, 1)
 	execrunning := false
 
 	errCh := make(chan error, 1) // fatal errors
@@ -135,7 +149,7 @@ func runserver() error {
 				queue.tasks = append(queue.tasks, task)
 				if !execrunning {
 					execrunning = true
-					go taskexec(taskDoneCh, queue.tasks[currentTaskIdx])
+					go taskexec(taskDoneCh, queue.tasks[currentTaskIdx], taskCancelCh)
 				}
 				r.client <- task.id
 				close(r.client)
@@ -149,7 +163,8 @@ func runserver() error {
 							continue mainloop
 						}
 						if i == 0 || queue.tasks[i-1].completed {
-							r.client <- "cannot cancel running task" // TODO?
+							taskCancelCh <- struct{}{}
+							r.client <- "ok" // TODO?
 							close(r.client)
 							continue mainloop
 						}
@@ -173,7 +188,7 @@ func runserver() error {
 			execrunning = false
 			if currentTaskIdx <= len(queue.tasks)-1 { // task exists
 				execrunning = true
-				go taskexec(taskDoneCh, queue.tasks[currentTaskIdx])
+				go taskexec(taskDoneCh, queue.tasks[currentTaskIdx], taskCancelCh)
 			}
 		}
 	}
