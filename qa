@@ -1,0 +1,7 @@
+#!/bin/sh
+# q with daemon autostart
+if ! pgrep -x q >/dev/null; then
+    setsid -f q -s >/dev/null 2>&1
+    # for i in {1..20}; do [[ -S /run/user/1000/q.sock ]] && break; sleep 0.05; done
+fi
+q "$@"
