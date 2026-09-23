@@ -38,7 +38,7 @@ func runclient() error {
 		if err != nil { return err }
 		if !quiet { fmt.Println(s) }
 	case cancel != "":
-		s, err := communicate(fmt.Sprintf("-r %s", cancel))
+		s, err := communicate(fmt.Sprintf("-c %s", cancel))
 		if err != nil { return err }
 		if !quiet { fmt.Println(s) }
 	default:

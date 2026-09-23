@@ -153,7 +153,7 @@ func runserver() error {
 				}
 				r.client <- task.id
 				close(r.client)
-			case "-r":
+			case "-c":
 				id := r.cmd[3:]
 				for i, task := range queue.tasks {
 					if task.id == id {
