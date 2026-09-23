@@ -1,0 +1,23 @@
+Simple shell queuer daemon.
+
+Examples:
+    # server
+    q -s
+    q -s -i "/run/user/1000/Youtuber."
+
+    # quit server
+    q -Q
+
+    # enqueue task
+    q -a "yt-dlp https://www.youtube.com/watch?v=pSzlZMzTwSg"
+
+    # enqueue task, don't print id
+    q -q -a "echo 2"
+
+    # list tasks
+    q -l
+
+    # tail -f output
+    ./q -D >/tmp/q.out 2>&1
+    q -a "yt-dlp https://www.youtube.com/watch?v=pSzlZMzTwSg"
+    tail -f /tmp/q.out
